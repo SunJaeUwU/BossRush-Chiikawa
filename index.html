@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BossRush</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111827; /* Tailwind gray-900 */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+
+
+        
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            background-color: #1f2937; /* Tailwind gray-800 */
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(17, 24, 39, 0.85); /* Semi-transparent gray-900 */
+            color: white;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover { background: #2563eb; }
+        .btn:active { transform: scale(0.95); }
+        .btn:disabled { opacity: 0.6; cursor: wait; }
+
+        .stage-select-content {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 40px;
+            width: auto;
+            margin-left: 36px;
+            transform: translateY(-80px);
+        }
+
+        #stageSelectScreen {
+            align-items: flex-start;
+            box-sizing: border-box;
+            padding-left: 24px;
+        }
+
+        #stageSelectScreen .stage-select-title {
+            position: absolute;
+            top: 32px;
+            left: 0;
+            width: 100%;
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .stage-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 200px;
+            height: 104px;
+            flex: 0 0 200px;
+            box-sizing: border-box;
+            padding: 14px 18px;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            background: rgba(31, 41, 55, 0.95);
+            color: white;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .stage-card:hover {
+            background: #374151;
+            transform: translateY(-3px);
+        }
+
+        .stage-card:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .stage-card-number {
+            color: #93c5fd;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .stage-boss-image {
+            display: block;
+            width: 72px;
+            height: 72px;
+            flex: 0 0 72px;
+            image-rendering: pixelated;
+        }
+
+        #stageBossImage {
+            width: 84px;
+            height: 84px;
+            flex-basis: 84px;
+        }
+
+        #stage2BossImage {
+            width: 60px;
+            height: 60px;
+            flex-basis: 60px;
+        }
+
+        .stage-card-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .stage-card-description {
+            color: #d1d5db;
+            font-size: 16px;
+        }
+
+        .stage-back-btn {
+            position: absolute;
+            right: 24px;
+            bottom: 24px;
+            background: #4b5563;
+        }
+
+        .stage-back-btn:hover { background: #374151; }
+
+        .game-over-stage-select-btn {
+            position: relative;
+            top: 40px;
+            margin-top: 16px;
+            background: #4b5563;
+        }
+
+        .game-over-stage-select-btn:hover { background: #374151; }
+
+        .title {
+            font-size: 64px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #ef4444; /* Boss red */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #9ca3af;
+        }
+
+        .controls-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .controls-box p {
+            margin: 8px 0;
+            font-size: 16px;
+            color: #e5e7eb;
+        }
+        
+        .controls-box span.key {
+            background: #374151;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div id="hud">
+        Retries: <span id="retryCountDisplay">0</span>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="overlay">
+        <h1 class="title">BOSSRUSH</h1>
+        <div class="subtitle">Best Score (Retries): <span id="bestScoreDisplay">None</span></div>
+        
+        <div class="controls-box">
+            <p><span class="key">W A S D</span> 이동키</p>
+            <p><span class="key">LMB</span> 마우스 방향으로 화살 발사</p>
+            <p><span class="key">RMB</span> 화살 회수</p>
+            <p><span class="key">Shift</span> 구르기 (0.3초 무적)</p>
+            <p class="mt-4 text-sm text-center text-gray-400">단 하나의 화살로 보스를 처치하세요</p>
+        </div>
+
+        <button class="btn" id="startBtn" disabled>Loading Character...</button>
+    </div>
+
+    <div id="stageSelectScreen" class="overlay hidden">
+        <h1 class="title stage-select-title">STAGE SELECT</h1>
+        <div class="stage-select-content">
+            <button class="stage-card" id="stage1Btn" type="button">
+                <canvas id="stageBossImage" class="stage-boss-image" width="100" height="100"></canvas>
+                <span class="stage-card-details">
+                    <span class="stage-card-number">STAGE 1</span>
+                    <span class="stage-card-description">Octoroc</span>
+                </span>
+            </button>
+            <button class="stage-card" id="stage2Btn" type="button">
+                <canvas id="stage2BossImage" class="stage-boss-image" width="100" height="100"></canvas>
+                <span class="stage-card-details">
+                    <span class="stage-card-number">STAGE 2</span>
+                    <span class="stage-card-description">Chiikawa</span>
+                </span>
+            </button>
+            <button class="stage-card" id="stage3Btn" type="button" disabled>
+                <span class="stage-card-details">
+                    <span class="stage-card-number">STAGE 3</span>
+                    <span class="stage-card-description">준비 중</span>
+                </span>
+            </button>
+        </div>
+        <button class="btn stage-back-btn" id="stageBackBtn" type="button">Back</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="overlay hidden">
+        <h1 class="title" style="color: #ef4444;">YOU DIED</h1>
+        <button class="btn" id="retryBtn">Retry</button>
+        <button class="btn game-over-stage-select-btn" id="gameOverStageSelectBtn" type="button">Stage Select</button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="overlay hidden">
+        <h1 class="title" style="color: #3b82f6;">VICTORY</h1>
+        <p class="subtitle mb-2">You defeated the boss!</p>
+        <p class="text-xl mb-6">Total Retries: <span id="finalRetryCount" class="font-bold text-yellow-400">0</span></p>
+        <button class="btn" id="homeBtn">Back to Menu</button>
+    </div>
+</div>
+
+<script>
+    // --- Setup & Constants ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI Elements
+    const startScreen = document.getElementById('startScreen');
+    const stageSelectScreen = document.getElementById('stageSelectScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const victoryScreen = document.getElementById('victoryScreen');
+    const retryCountDisplay = document.getElementById('retryCountDisplay');
+    const bestScoreDisplay = document.getElementById('bestScoreDisplay');
+    const finalRetryCount = document.getElementById('finalRetryCount');
+    const startBtn = document.getElementById('startBtn');
+    const stageBossImage = document.getElementById('stageBossImage');
+    const stage2BossImage = document.getElementById('stage2BossImage');
+    const stageConfigs = {
+        1: { hp: 10, speedMultiplier: 1, sprite: 'octoroc', frameWidth: 100, frameHeight: 100, frameCount: 2, renderSize: 114 },
+        2: { hp: 15, speedMultiplier: 1.1, sprite: 'chiikawaBoss', frameWidth: 688, frameHeight: 700, frameCount: 4, renderSize: 78 }
+    };
+    
+    // Game Dimensions
+    const CW = canvas.width;
+    const CH = canvas.height;
+    const DASH_DURATION = 0.3; // seconds
+
+    // --- Disable Context Menu ---
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // --- Input State ---
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+    const mouse = { x: CW/2, y: CH/2, leftDown: false, rightDown: false };
+    
+    // Track previous state for discrete presses
+    let prevLeftDown = false;
+    let prevRightDown = false;
+
+    // Listeners
+    window.addEventListener('keydown', e => {
+        const key = e.code === 'Space' ? 'space' : e.key.toLowerCase();
+        if(keys.hasOwnProperty(key)) keys[key] = true;
+    });
+    window.addEventListener('keyup', e => {
+        const key = e.code === 'Space' ? 'space' : e.key.toLowerCase();
+        if(keys.hasOwnProperty(key)) keys[key] = false;
+    });
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = (e.clientX - rect.left) * (CW / rect.width);
+        mouse.y = (e.clientY - rect.top) * (CH / rect.height);
+    });
+    canvas.addEventListener('mousedown', e => {
+        if(e.button === 0) mouse.leftDown = true;
+        if(e.button === 2) mouse.rightDown = true;
+    });
+    canvas.addEventListener('mouseup', e => {
+        if(e.button === 0) mouse.leftDown = false;
+        if(e.button === 2) mouse.rightDown = false;
+    });
+
+    // --- Game State Variables ---
+    let gameState = 'START'; // START, PLAYING, GAMEOVER, VICTORY
+    let retries = 0;
+    let lastTime = 0;
+    let currentStage = 1;
+    let audioContext = null;
+    
+    // Entities
+    let player, boss, arrow, projectiles, hitEffects;
+    let playerSprites = {};
+    const playerSpriteSources = {
+        down: 'Resources/Sprite/Player/PlayerDown_Web.png',
+        up: 'Resources/Sprite/Player/PlayerUp_Web.png',
+        left: 'Resources/Sprite/Player/PlayerLeft_Web.png',
+        right: 'Resources/Sprite/Player/PlayerRight_Web.png',
+        rollDown: 'Resources/Sprite/Player/PlayerRollDown_Web.png',
+        rollUp: 'Resources/Sprite/Player/PlayerRollUp_Web.png',
+        rollLeft: 'Resources/Sprite/Player/PlayerRollLeft_Web.png',
+        rollRight: 'Resources/Sprite/Player/PlayerRollRight_Web.png',
+        bow: 'Resources/Sprite/Item/Bow_Web.png',
+        arrow: 'Resources/Sprite/Item/Arrow_Web.png',
+        hit: 'Resources/Sprite/Effect/Hit_Web.png',
+        octoroc: 'Resources/Sprite/Monster/Octoroc_Web.png',
+        chiikawaBoss: 'Resources/Sprite/Monster/ChiikawaBoss.png',
+        map: 'Resources/Sprite/Map/BossMap3.png'
+    };
+
+    function ensureAudioContext() {
+        const AudioContextType = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextType) {
+            console.warn('Web Audio API is not supported in this browser.');
+            return null;
+        }
+
+        if (!audioContext) audioContext = new AudioContextType();
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(error => console.error('Unable to resume audio:', error));
+        }
+        return audioContext;
+    }
+
+    function playBossHitSound() {
+        const audio = ensureAudioContext();
+        if (!audio) return;
+
+        const now = audio.currentTime;
+        const noiseBuffer = audio.createBuffer(1, Math.floor(audio.sampleRate * 0.09), audio.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < noiseData.length; i++) {
+            noiseData[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audio.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const noiseFilter = audio.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(2600, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(900, now + 0.09);
+        noiseFilter.Q.setValueAtTime(0.8, now);
+        const noiseGain = audio.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.linearRampToValueAtTime(0.11, now + 0.002);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audio.destination);
+        noise.start(now);
+        noise.stop(now + 0.09);
+
+        const thump = audio.createOscillator();
+        thump.type = 'triangle';
+        thump.frequency.setValueAtTime(360, now);
+        thump.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+        const thumpGain = audio.createGain();
+        thumpGain.gain.setValueAtTime(0.0001, now);
+        thumpGain.gain.linearRampToValueAtTime(0.07, now + 0.002);
+        thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+        thump.connect(thumpGain);
+        thumpGain.connect(audio.destination);
+        thump.start(now);
+        thump.stop(now + 0.08);
+    }
+
+    function playArrowReleaseSound() {
+        const audio = ensureAudioContext();
+        if (!audio) return;
+
+        const now = audio.currentTime;
+        const twang = audio.createOscillator();
+        twang.type = 'triangle';
+        twang.frequency.setValueAtTime(780, now);
+        twang.frequency.exponentialRampToValueAtTime(320, now + 0.09);
+        const twangGain = audio.createGain();
+        twangGain.gain.setValueAtTime(0.0001, now);
+        twangGain.gain.linearRampToValueAtTime(0.08, now + 0.003);
+        twangGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        twang.connect(twangGain);
+        twangGain.connect(audio.destination);
+        twang.start(now);
+        twang.stop(now + 0.09);
+    }
+
+    function playBossShotSound() {
+        const audio = ensureAudioContext();
+        if (!audio) return;
+
+        const now = audio.currentTime;
+        const noiseBuffer = audio.createBuffer(1, Math.floor(audio.sampleRate * 0.07), audio.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < noiseData.length; i++) {
+            noiseData[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audio.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const filter = audio.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, now);
+        filter.frequency.exponentialRampToValueAtTime(240, now + 0.07);
+        const noiseGain = audio.createGain();
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.linearRampToValueAtTime(0.06, now + 0.002);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(audio.destination);
+        noise.start(now);
+        noise.stop(now + 0.07);
+
+        const thud = audio.createOscillator();
+        thud.type = 'triangle';
+        thud.frequency.setValueAtTime(130, now);
+        thud.frequency.exponentialRampToValueAtTime(65, now + 0.065);
+        const thudGain = audio.createGain();
+        thudGain.gain.setValueAtTime(0.0001, now);
+        thudGain.gain.linearRampToValueAtTime(0.05, now + 0.002);
+        thudGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+        thud.connect(thudGain);
+        thudGain.connect(audio.destination);
+        thud.start(now);
+        thud.stop(now + 0.065);
+    }
+
+    function loadPlayerSprites() {
+        return Promise.all(Object.entries(playerSpriteSources).map(([direction, source]) =>
+            new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve([direction, image]);
+                image.onerror = () => reject(new Error(`Unable to load player sprite: ${source}`));
+                image.src = source;
+            })
+        )).then(sprites => Object.fromEntries(sprites));
+    }
+
+    function getDirectionFromVector(dx, dy) {
+        return Math.abs(dx) > Math.abs(dy)
+            ? (dx < 0 ? 'left' : 'right')
+            : (dy < 0 ? 'up' : 'down');
+    }
+
+    // --- Entity Classes ---
+    class Player {
+        constructor() {
+            this.radius = 14.4;
+            this.reset();
+        }
+        reset() {
+            this.x = CW / 2;
+            this.y = CH - 100;
+            this.speed = 250;
+            this.dashSpeed = 700;
+            this.isDashing = false;
+            this.dashTimer = 0;
+            this.dashCooldown = 0;
+            this.rollDirection = 'down';
+            this.dead = false;
+        }
+        update(dt) {
+            if (this.dead) return;
+
+            let dx = 0; let dy = 0;
+            if (keys.w) dy -= 1;
+            if (keys.s) dy += 1;
+            if (keys.a) dx -= 1;
+            if (keys.d) dx += 1;
+
+            // Dash Logic
+            if (this.dashCooldown > 0) this.dashCooldown -= dt;
+            if (this.dashTimer > 0) {
+                this.dashTimer -= dt;
+                if (this.dashTimer <= 0) this.isDashing = false;
+            }
+
+            if (keys.shift && this.dashCooldown <= 0 && !this.isDashing) {
+                this.isDashing = true;
+                this.dashTimer = DASH_DURATION;
+                this.dashCooldown = 1.0; // 1s cooldown
+                this.rollDirection = dx !== 0 || dy !== 0
+                    ? getDirectionFromVector(dx, dy)
+                    : getDirectionFromVector(mouse.x - this.x, mouse.y - this.y);
+            }
+
+            // Movement
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                dx /= len; dy /= len;
+                const currentSpeed = this.isDashing ? this.dashSpeed : this.speed;
+                
+                let nextX = this.x + dx * currentSpeed * dt;
+                let nextY = this.y + dy * currentSpeed * dt;
+
+                this.x = nextX;
+                this.y = nextY;
+                
+                // Screen boundaries
+                this.x = Math.max(this.radius, Math.min(CW - this.radius, this.x));
+                this.y = Math.max(this.radius, Math.min(CH - this.radius, this.y));
+            }
+        }
+        draw(ctx) {
+            if (this.dead) return;
+            ctx.save();
+            ctx.globalAlpha = this.isDashing ? 0.4 : 1.0;
+
+            const dx = mouse.x - this.x;
+            const dy = mouse.y - this.y;
+            const spriteWidth = 38.4;
+            const spriteHeight = 48;
+            const rollScale = 1.2;
+            ctx.imageSmoothingEnabled = false;
+            if (this.isDashing) {
+                const sprite = playerSprites[`roll${this.rollDirection[0].toUpperCase()}${this.rollDirection.slice(1)}`];
+                const frameWidth = sprite.width / 8;
+                const frame = Math.min(7, Math.floor((1 - this.dashTimer / DASH_DURATION) * 8));
+                const rollWidth = spriteWidth * rollScale;
+                const rollHeight = spriteHeight * rollScale;
+                ctx.drawImage(
+                    sprite,
+                    frame * frameWidth, 0, frameWidth, sprite.height,
+                    this.x - rollWidth / 2,
+                    this.y - rollHeight / 2,
+                    rollWidth,
+                    rollHeight
+                );
+            } else {
+                const sprite = playerSprites[getDirectionFromVector(dx, dy)];
+                ctx.drawImage(
+                    sprite,
+                    this.x - spriteWidth / 2,
+                    this.y - spriteHeight / 2,
+                    spriteWidth,
+                    spriteHeight
+                );
+
+                const angle = Math.atan2(dy, dx);
+                ctx.translate(
+                    this.x + Math.cos(angle) * 14.4,
+                    this.y + Math.sin(angle) * 14.4
+                );
+                ctx.rotate(angle - Math.PI / 4 + Math.PI);
+                const bowSize = 36;
+                ctx.drawImage(playerSprites.bow, -bowSize / 2, -bowSize / 2, bowSize, bowSize);
+            }
+            
+            ctx.restore();
+        }
+    }
+
+    class Arrow {
+        constructor() {
+            this.radius = 6;
+            this.reset();
+        }
+        reset() {
+            this.state = 'HELD'; // HELD, FLYING, DROPPED, RECALLING
+            this.x = 0; this.y = 0;
+            this.vx = 0; this.vy = 0;
+            this.speed = 1000;
+            this.recallSpeed = 1500;
+            this.isImpactMarker = false;
+        }
+        update(dt) {
+            if (this.state === 'HELD') {
+                this.x = player.x;
+                this.y = player.y;
+                
+                // Shoot
+                if (mouse.leftDown && !prevLeftDown && !player.dead) {
+                    this.state = 'FLYING';
+                    playBossHitSound();
+                    const angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+                    this.x += Math.cos(angle) * 16;
+                    this.y += Math.sin(angle) * 16;
+                    this.vx = Math.cos(angle) * this.speed;
+                    this.vy = Math.sin(angle) * this.speed;
+                }
+            } else if (this.state === 'FLYING') {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // Screen bounds
+                if (this.x < 0 || this.x > CW || this.y < 0 || this.y > CH) {
+                    this.state = 'DROPPED';
+                }
+
+                // Boss Collision
+                if (boss.hp > 0 &&
+                    this.x > boss.x && this.x < boss.x + boss.w &&
+                    this.y > boss.y && this.y < boss.y + boss.h) {
+                    this.state = 'DROPPED';
+                    this.isImpactMarker = true;
+                    hitEffects.push({ x: this.x, y: this.y, elapsed: 0 });
+                    playArrowReleaseSound();
+                    boss.takeDamage();
+                }
+            } else if (this.state === 'RECALLING') {
+                // Ignore walls, fly straight to player
+                const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                this.x += Math.cos(angle) * this.recallSpeed * dt;
+                this.y += Math.sin(angle) * this.recallSpeed * dt;
+
+                // Check distance
+                if (Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius) {
+                    this.state = 'HELD';
+                }
+            }
+
+            // Trigger Recall
+            if (mouse.rightDown && !prevRightDown && (this.state === 'DROPPED' || this.state === 'FLYING')) {
+                this.state = 'RECALLING';
+                this.isImpactMarker = false;
+            }
+        }
+        draw(ctx) {
+            if (this.state === 'HELD') return; // Don't draw if held by player
+            
+            ctx.save();
+            if (this.state === 'DROPPED' && this.isImpactMarker) {
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowBlur = 16;
+                ctx.shadowColor = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                return;
+            }
+
+            const angle = this.state === 'RECALLING'
+                ? Math.atan2(player.y - this.y, player.x - this.x)
+                : Math.atan2(this.vy, this.vx);
+            const spriteWidth = 48;
+            const spriteHeight = spriteWidth * playerSprites.arrow.height / playerSprites.arrow.width;
+            ctx.imageSmoothingEnabled = false;
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+            ctx.drawImage(
+                playerSprites.arrow,
+                -spriteWidth / 2,
+                -spriteHeight / 2,
+                spriteWidth,
+                spriteHeight
+            );
+            ctx.restore();
+        }
+    }
+
+    class Boss {
+        constructor() {
+            this.w = 90;
+            this.h = 90;
+            this.reset();
+        }
+        reset() {
+            const stage = stageConfigs[currentStage];
+            this.hp = stage.hp;
+            this.maxHp = stage.hp;
+            this.x = CW/2 - this.w/2;
+            this.y = 50;
+            this.speed = 130 * stage.speedMultiplier;
+            this.targetSpeed = 130 * stage.speedMultiplier;
+            this.dir = 1;
+            this.verticalDir = 1;
+            this.verticalTimer = 1 + Math.random();
+            this.shootTimer = 0.35;
+            this.flashTimer = 0;
+            this.phase = 1;
+            this.shotCount = 0;
+            this.animationTime = 0;
+        }
+        takeDamage() {
+            this.hp -= 1;
+            this.flashTimer = 0.1;
+            const stage = stageConfigs[currentStage];
+            if (this.hp <= 0) {
+                this.hp = 0;
+                triggerVictory();
+            } else if (this.hp <= this.maxHp / 2) {
+                this.phase = 2;
+                this.targetSpeed = 250 * stage.speedMultiplier;
+            }
+        }
+        update(dt) {
+            if (this.hp <= 0) return;
+
+            const stage = stageConfigs[currentStage];
+
+            // Flash timer
+            if (this.flashTimer > 0) this.flashTimer -= dt;
+
+            const speedChange = 100 * stage.speedMultiplier * dt;
+            if (this.speed < this.targetSpeed) {
+                this.speed = Math.min(this.targetSpeed, this.speed + speedChange);
+            } else if (this.speed > this.targetSpeed) {
+                this.speed = Math.max(this.targetSpeed, this.speed - speedChange);
+            }
+
+            // Movement
+            this.animationTime += dt;
+            this.x += this.speed * this.dir * dt;
+            if (this.x <= 20 || this.x + this.w >= CW - 20) {
+                this.dir *= -1;
+                this.x = Math.max(20, Math.min(CW - this.w - 20, this.x));
+            }
+
+            this.verticalTimer -= dt;
+            if (this.verticalTimer <= 0) {
+                this.verticalDir = Math.random() < 0.5 ? -1 : 1;
+                this.verticalTimer = 0.8 + Math.random() * 1.4;
+            }
+
+            const verticalSpeed = (this.phase === 1 ? 90 : 140) * stage.speedMultiplier;
+            const minY = 35;
+            const maxY = CH * 0.58 - this.h;
+            this.y += verticalSpeed * this.verticalDir * dt;
+            if (this.y <= minY || this.y >= maxY) {
+                this.verticalDir *= -1;
+                this.y = Math.max(minY, Math.min(maxY, this.y));
+            }
+
+            // Shooting
+            this.shootTimer -= dt;
+            if (this.shootTimer <= 0) {
+                this.shoot();
+                this.shootTimer = currentStage === 2 && this.phase === 1
+                    ? 0.12 / stage.speedMultiplier
+                    : (this.phase === 1 ? 0.9 : (currentStage === 1 ? 1 : 0.7 )) / stage.speedMultiplier;
+            }
+        }
+        shoot() {
+            if (player.dead) return;
+            playBossShotSound();
+            const cx = this.x + this.w/2;
+            const cy = this.y + this.h/2;
+            const baseAngle = Math.atan2(player.y - cy, player.x - cx);
+            this.shotCount++;
+            if (currentStage === 2 && this.phase === 1) {
+                const speed = 600;
+                projectiles.push({
+                    x: cx, y: cy, r: 10,
+                    vx: Math.cos(baseAngle) * speed,
+                    vy: Math.sin(baseAngle) * speed
+                });
+                return;
+            }
+
+            const spreadCount = this.phase === 1 ? 3 : 5;
+            const spreadAngle = this.phase === 1 ? 12 : 18;
+            const speed = this.phase === 1 ? 300 : 360;
+
+            for (let i = 0; i < spreadCount; i++) {
+                const offset = (i - (spreadCount - 1) / 2) * spreadAngle * Math.PI / 180;
+                const angle = baseAngle + offset;
+                projectiles.push({
+                    x: cx, y: cy, r: this.phase === 1 ? 10 : 12,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed
+                });
+            }
+
+            if (this.phase === 2 && this.shotCount % 2 === 0) {
+                const aimedSpeed = 440;
+                projectiles.push({
+                    x: cx, y: cy, r: 12,
+                    vx: Math.cos(baseAngle) * aimedSpeed,
+                    vy: Math.sin(baseAngle) * aimedSpeed
+                });
+            }
+        }
+        draw(ctx) {
+            if (this.hp <= 0) return;
+            
+            ctx.save();
+            const stage = stageConfigs[currentStage];
+            const frame = Math.floor(this.animationTime / 0.18) % stage.frameCount;
+            const spriteSize = stage.renderSize;
+            ctx.imageSmoothingEnabled = false;
+            ctx.filter = this.flashTimer > 0 ? 'brightness(0) invert(1)' : 'none';
+            ctx.drawImage(
+                playerSprites[stage.sprite],
+                frame * stage.frameWidth, 0, stage.frameWidth, stage.frameHeight,
+                this.x + (this.w - spriteSize) / 2,
+                this.y + (this.h - spriteSize) / 2,
+                spriteSize, spriteSize
+            );
+            ctx.filter = 'none';
+            
+            // Draw HP Bar
+            const barW = 80;
+            const barH = 8;
+            const bx = this.x + this.w/2 - barW/2;
+            const by = this.y - 15;
+            
+            ctx.fillStyle = '#374151'; // Bg
+            ctx.fillRect(bx, by, barW, barH);
+            
+            const hpRatio = this.hp / this.maxHp;
+            ctx.fillStyle = this.phase === 1 ? '#22c55e' : '#f59e0b'; // Green or Orange
+            ctx.fillRect(bx, by, barW * hpRatio, barH);
+            
+            ctx.restore();
+        }
+    }
+
+    // --- Core Functions ---
+    function init() {
+        player = new Player();
+        arrow = new Arrow();
+        boss = new Boss();
+        projectiles = [];
+        hitEffects = [];
+        
+        loadHighScore();
+
+        startBtn.addEventListener('click', showStageSelect);
+        document.getElementById('stage1Btn').addEventListener('click', () => startGame(1));
+        document.getElementById('stage2Btn').addEventListener('click', () => startGame(2));
+        document.getElementById('stageBackBtn').addEventListener('click', () => {
+            stageSelectScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+        startBtn.disabled = false;
+        startBtn.textContent = 'Click to Start';
+        document.getElementById('retryBtn').addEventListener('click', () => resetGame(false));
+        document.getElementById('gameOverStageSelectBtn').addEventListener('click', () => {
+            gameState = 'START';
+            gameOverScreen.classList.add('hidden');
+            stageSelectScreen.classList.remove('hidden');
+        });
+        document.getElementById('homeBtn').addEventListener('click', backToMenu);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function loadHighScore() {
+        const best = localStorage.getItem('bossrush_best');
+        if (best !== null) {
+            bestScoreDisplay.innerText = best;
+        } else {
+            bestScoreDisplay.innerText = 'None';
+        }
+    }
+
+    function startGame(stage = 1) {
+        ensureAudioContext();
+        currentStage = stage;
+        gameState = 'PLAYING';
+        stageSelectScreen.classList.add('hidden');
+        startScreen.classList.add('hidden');
+        retries = 0;
+        updateHud();
+        resetGame(true);
+    }
+
+    function showStageSelect() {
+        startScreen.classList.add('hidden');
+        stageSelectScreen.classList.remove('hidden');
+    }
+
+    function resetGame(fullReset = false) {
+        if (fullReset) {
+            retries = 0;
+            boss.reset();
+        } else {
+            retries++;
+            // Boss HP carries over? No, it's a typical boss fight. If you die, boss resets.
+            boss.reset(); 
+        }
+        
+        updateHud();
+        player.reset();
+        arrow.reset();
+        projectiles = [];
+        hitEffects = [];
+        gameState = 'PLAYING';
+        
+        gameOverScreen.classList.add('hidden');
+        victoryScreen.classList.add('hidden');
+    }
+
+    function triggerGameOver() {
+        gameState = 'GAMEOVER';
+        player.dead = true;
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    function triggerVictory() {
+        gameState = 'VICTORY';
+        finalRetryCount.innerText = retries;
+        victoryScreen.classList.remove('hidden');
+        
+        // Save score
+        const best = localStorage.getItem('bossrush_best');
+        if (best === null || retries < parseInt(best)) {
+            localStorage.setItem('bossrush_best', retries);
+            loadHighScore();
+        }
+    }
+
+    function backToMenu() {
+        gameState = 'START';
+        victoryScreen.classList.add('hidden');
+        startScreen.classList.remove('hidden');
+    }
+
+    function updateHud() {
+        retryCountDisplay.innerText = retries;
+    }
+
+    // --- Game Loop Update & Draw ---
+    function update(dt) {
+        for (let i = hitEffects.length - 1; i >= 0; i--) {
+            hitEffects[i].elapsed += dt;
+            if (hitEffects[i].elapsed >= 0.42) {
+                hitEffects.splice(i, 1);
+            }
+        }
+
+        if (gameState !== 'PLAYING') return;
+
+        player.update(dt);
+        arrow.update(dt);
+        boss.update(dt);
+
+        // Update Projectiles
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            let p = projectiles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+
+            // Remove out of bounds
+            if (p.x < -20 || p.x > CW + 20 || p.y < -20 || p.y > CH + 20) {
+                projectiles.splice(i, 1);
+                continue;
+            }
+
+            // Player Collision (Circle vs Circle)
+            if (!player.dead && !player.isDashing) {
+                const distSq = (p.x - player.x)**2 + (p.y - player.y)**2;
+                const rSum = p.r + player.radius;
+                if (distSq < rSum*rSum) {
+                    triggerGameOver();
+                }
+            }
+        }
+        
+        // Track inputs for edges
+        prevLeftDown = mouse.leftDown;
+        prevRightDown = mouse.rightDown;
+    }
+
+    function draw() {
+        if (gameState === 'START') {
+            ctx.fillStyle = 'rgba(254, 255, 255, 1)';
+            ctx.fillRect(0, 0, CW, CH);
+            return;
+        }
+
+        ctx.drawImage(playerSprites.map, 0, 0, CW, CH);
+
+        // Draw Entities
+        boss.draw(ctx);
+        player.draw(ctx);
+        arrow.draw(ctx);
+
+        const hitSprite = playerSprites.hit;
+        const hitFrameCount = 6;
+        const hitFrameWidth = hitSprite.width / hitFrameCount;
+        for (const effect of hitEffects) {
+            const frame = Math.min(Math.floor(effect.elapsed / 0.07), hitFrameCount - 1);
+            ctx.drawImage(
+                hitSprite,
+                frame * hitFrameWidth, 0, hitFrameWidth, hitSprite.height,
+                effect.x - 28, effect.y - 28, 56, 56
+            );
+        }
+
+        // Draw Projectiles
+        for (let p of projectiles) {
+            const angle = Math.atan2(p.vy, p.vx);
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(angle);
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = '#f97316';
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = p.r;
+            ctx.beginPath();
+            ctx.moveTo(-p.r * 1.8, 0);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(0, 0, p.r * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000;
+        
+        // Cap dt to prevent huge jumps if tab is inactive
+        if (dt > 0.1) dt = 0.1; 
+        lastTime = timestamp;
+
+        update(dt);
+        draw();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // --- Start ---
+    loadPlayerSprites()
+        .then(sprites => {
+            playerSprites = sprites;
+            for (const [image, sprite, frameWidth, frameHeight] of [
+                [stageBossImage, playerSprites.octoroc, 100, 100],
+                [stage2BossImage, playerSprites.chiikawaBoss, 688, 700]
+            ]) {
+                const imageContext = image.getContext('2d');
+                imageContext.imageSmoothingEnabled = false;
+                imageContext.drawImage(sprite, 0, 0, frameWidth, frameHeight, 0, 0, 100, 100);
+            }
+            init();
+        })
+        .catch(error => {
+            console.error(error);
+            startBtn.textContent = 'Character Sprites Unavailable';
+            const message = document.createElement('p');
+            message.className = 'subtitle';
+            message.textContent = 'Could not load the game sprites from Resources/Sprite.';
+            startScreen.appendChild(message);
+        });
+
+</script>
+</body>
+</html>
